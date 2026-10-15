@@ -152,6 +152,43 @@ export default function App() {
     setToastMessage('Registre vidé : feuille Saisie_Donnees remise à blanc (vierge).');
   };
 
+  // Launch real-time test convoy with 3 Cosumar fleet trucks
+  const handleStartDemoConvoy = () => {
+    const nowMs = Date.now();
+    const demoBatch = [
+      { plate: '70605A55', driver: 'BENNAR EEDOUANE', mins: 52, product: 'Sucre Brut en vrac (Importation)' },
+      { plate: '12325D6', driver: 'CHAKIR SAID', mins: 32, product: 'Sucre Blanc Raffiné (Sacs 50 Kg)' },
+      { plate: '2804D6', driver: 'MOUHAJER ABDELMAJID', mins: 12, product: 'Mélasse de canne / betterave' },
+    ];
+
+    let startNum = 1001;
+    for (const t of transactions) {
+      const m = t.id.match(/^TR-(\d+)$/i);
+      if (m) {
+        const val = parseInt(m[1], 10);
+        if (val >= startNum) startNum = val + 1;
+      }
+    }
+
+    const newRows: Transaction[] = demoBatch.map((item, idx) => ({
+      id: `TR-${String(startNum + idx).padStart(4, '0')}`,
+      exitPortTime: new Date(nowMs - item.mins * 60000).toISOString(),
+      truckID: item.plate,
+      grossWeight: null,
+      tare: null,
+      netWeight: null,
+      driverName: item.driver,
+      product: item.product,
+      status: 'En transit',
+      entryDepotTime: null,
+      carrier: 'Cosumar Logistique',
+      notes: 'Convoi en suivi temps réel Port -> Cosumar'
+    }));
+
+    setTransactions(prev => [...newRows, ...prev]);
+    setToastMessage('Convoi de 3 camions Cosumar lancé avec succès en suivi temps réel !');
+  };
+
   // Reset demo data
   const handleResetSampleData = () => {
     if (confirm('Voulez-vous réinitialiser le registre avec les données d\'exemple initiales ?')) {
@@ -252,8 +289,8 @@ export default function App() {
         <KPICards
           transactions={transactions}
           onFilterTransit={() => {
-            const tableElement = document.getElementById('search-transactions');
-            if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth' });
+            const el = document.getElementById('corridor-temps-reel');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
           }}
           onFilterFinished={() => {
             const tableElement = document.getElementById('search-transactions');
@@ -266,6 +303,7 @@ export default function App() {
           transactions={transactions}
           onWeighTruck={handleStartWeighingTruck}
           onOpenDepartModal={() => setIsDepartModalOpen(true)}
+          onStartDemoConvoy={handleStartDemoConvoy}
         />
 
         {/* Excel Saisie_Donnees Table representation */}
