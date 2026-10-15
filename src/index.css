@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+  }
+  #printable-ticket {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) !important;
+    top: 0;
+    width: 100%;
+    max-width: 300px !important;
+    margin: 0 auto;
+    padding: 6px !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

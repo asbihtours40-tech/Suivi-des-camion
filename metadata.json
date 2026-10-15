@@ -1,0 +1,6 @@
+{
+  "name": "Suivi Logistique Port - Dépôt",
+  "description": "Système de suivi logistique des camions : sortie du port sans pesée et pesage obligatoire à l'arrivée au dépôt.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
