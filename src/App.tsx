@@ -26,6 +26,9 @@ import {
 import { 
   CosumarFleetModal 
 } from './components/CosumarFleetModal';
+import { 
+  RealTimeDataEntry 
+} from './components/RealTimeDataEntry';
 import { Transaction } from './types';
 import { CosumarTruck } from './data/cosumarFleet';
 import { 
@@ -189,6 +192,73 @@ export default function App() {
     setToastMessage('Convoi de 3 camions Cosumar lancé avec succès en suivi temps réel !');
   };
 
+  // Full real-time photo fleet loader (6 active in transit + 4 completed at Cosumar)
+  const handleLoadPhotoFleetConvoy = () => {
+    const nowMs = Date.now();
+    
+    // In transit trucks (active on highway at various real-time progress steps)
+    const activePhotoTrucks = [
+      { plate: '70605A55', driver: 'BENNAR EEDOUANE', mins: 55, prod: 'Sucre Brut en vrac (Importation)' },
+      { plate: '12325D6', driver: 'CHAKIR SAID', mins: 42, prod: 'Sucre Blanc Raffiné (Sacs 50 Kg)' },
+      { plate: '65334A55', driver: 'MAHFOUD ABDERRAHIM', mins: 28, prod: 'Sucre Granulé Vrac (Citerne)' },
+      { plate: '3102A74', driver: 'MEHDI CHAHID', mins: 18, prod: 'Sucre Brut de Canne' },
+      { plate: '2804D6', driver: 'MOUHAJER ABDELMAJID', mins: 8, prod: 'Mélasse de betterave' },
+      { plate: '56063A55', driver: 'AZIZ EZZAHED', mins: 75, prod: 'Pulpe déshydratée en vrac' },
+    ];
+
+    // Already weighed at Cosumar pont-bascule
+    const completedPhotoTrucks = [
+      { plate: '58904A55', driver: 'ABDELILAH MANSOURI', startMins: 140, endMins: 85, brut: 43250, tare: 14650, prod: 'Sucre Brut en vrac (Importation)' },
+      { plate: '46182A7', driver: 'MOUTAWAKIL ADIL', startMins: 120, endMins: 65, brut: 41800, tare: 13900, prod: 'Sucre Blanc Raffiné (Sacs 50 Kg)' },
+      { plate: '65335A55', driver: 'BENDAM RACHID', startMins: 95, endMins: 40, brut: 44100, tare: 14800, prod: 'Pain de Sucre Cosumar' },
+      { plate: '3106A74', driver: 'NADI MAATI', startMins: 80, endMins: 25, brut: 42600, tare: 14200, prod: 'Sucre Brut en vrac (Importation)' },
+    ];
+
+    let startNum = 1001;
+    const generatedRows: Transaction[] = [];
+
+    // Add active transit trucks
+    activePhotoTrucks.forEach((item, idx) => {
+      generatedRows.push({
+        id: `TR-${String(startNum + idx).padStart(4, '0')}`,
+        exitPortTime: new Date(nowMs - item.mins * 60000).toISOString(),
+        truckID: item.plate,
+        grossWeight: null,
+        tare: null,
+        netWeight: null,
+        driverName: item.driver,
+        product: item.prod,
+        status: 'En transit',
+        entryDepotTime: null,
+        carrier: 'Cosumar Logistique',
+        notes: 'Saisie en temps réel • Sortie Quai Port'
+      });
+    });
+
+    startNum += activePhotoTrucks.length;
+
+    // Add completed weighings
+    completedPhotoTrucks.forEach((item, idx) => {
+      generatedRows.push({
+        id: `TR-${String(startNum + idx).padStart(4, '0')}`,
+        exitPortTime: new Date(nowMs - item.startMins * 60000).toISOString(),
+        truckID: item.plate,
+        grossWeight: item.brut,
+        tare: item.tare,
+        netWeight: item.brut - item.tare,
+        driverName: item.driver,
+        product: item.prod,
+        status: 'Terminé',
+        entryDepotTime: new Date(nowMs - item.endMins * 60000).toISOString(),
+        carrier: 'Cosumar Logistique',
+        notes: 'Pesage pont-bascule Cosumar validé'
+      });
+    });
+
+    setTransactions(generatedRows);
+    setToastMessage('Données réelles des photos saisies avec succès en temps réel (6 en route + 4 pesés) !');
+  };
+
   // Reset demo data
   const handleResetSampleData = () => {
     if (confirm('Voulez-vous réinitialiser le registre avec les données d\'exemple initiales ?')) {
@@ -296,6 +366,15 @@ export default function App() {
             const tableElement = document.getElementById('search-transactions');
             if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth' });
           }}
+        />
+
+        {/* Real-Time Express Data Entry Station */}
+        <RealTimeDataEntry
+          transactions={transactions}
+          onAddDepartPort={handleCreateDepartPort}
+          onCompleteWeighing={handleCompleteDepotWeighing}
+          onLoadPhotoFleetConvoy={handleLoadPhotoFleetConvoy}
+          nextIdPreview={nextIdPreview}
         />
 
         {/* Live Corridor of trucks en route */}
