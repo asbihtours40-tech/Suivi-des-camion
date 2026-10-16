@@ -248,19 +248,35 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
           </div>
 
-          {/* Signatures & Stamps */}
+          {/* Signatures & Stamps Multi-Agents */}
           <div className="grid grid-cols-2 gap-1 pt-1 border-t border-dashed border-slate-300 text-center text-[7px]">
-            <div className="p-1 border border-slate-200 rounded min-h-[32px] flex flex-col justify-between">
-              <span className="font-bold text-slate-500 uppercase">Visa Conducteur</span>
-              <span className="font-mono text-slate-400">Lu et approuvé</span>
+            <div className="p-1 border border-slate-200 rounded min-h-[34px] flex flex-col justify-between">
+              <span className="font-bold text-slate-500 uppercase">Visa Agent Quai Port</span>
+              <span className="font-bold text-blue-900 truncate">
+                {transaction.agentPort || 'M. Benkirane (AG-PORT-01)'}
+              </span>
+              <span className="text-emerald-700 font-bold flex items-center justify-center gap-0.5">
+                <CheckCircle2 className="w-1.5 h-1.5" /> Quai Validé
+              </span>
             </div>
-            <div className="p-1 border border-slate-200 rounded min-h-[32px] flex flex-col justify-between">
+            <div className="p-1 border border-slate-200 rounded min-h-[34px] flex flex-col justify-between">
               <span className="font-bold text-slate-500 uppercase">
-                {isCompleted ? 'Pont-Bascule Cosumar' : 'Capitainerie Port'}
+                {isCompleted ? 'Visa Opérateur Pont-Bascule' : 'Visa Conducteur'}
               </span>
-              <span className="font-mono text-emerald-700 font-bold flex items-center justify-center gap-0.5">
-                <CheckCircle2 className="w-2 h-2" /> Validé
-              </span>
+              {isCompleted ? (
+                <>
+                  <span className="font-bold text-amber-900 truncate">
+                    {transaction.agentCosumar || 'M. Tahiri (AG-COSU-02)'}
+                  </span>
+                  <span className="text-emerald-700 font-bold flex items-center justify-center gap-0.5">
+                    <CheckCircle2 className="w-1.5 h-1.5" /> Métrologie Cosumar OK
+                  </span>
+                </>
+              ) : (
+                <span className="font-mono text-slate-400">
+                  {transaction.driverName || 'Chauffeur convoi'}
+                </span>
+              )}
             </div>
           </div>
 

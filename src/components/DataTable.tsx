@@ -12,9 +12,12 @@ import {
   Eye,
   Edit2,
   RefreshCw,
-  Plus
+  Plus,
+  Users,
+  Anchor,
+  UserCheck
 } from 'lucide-react';
-import { Transaction, TransactionStatus } from '../types';
+import { Transaction, TransactionStatus, AVAILABLE_AGENTS } from '../types';
 import { formatDateFrench, formatWeight, formatTons, exportToCSV, computeTransitDuration } from '../utils/storage';
 
 interface DataTableProps {
@@ -44,12 +47,20 @@ export const DataTable: React.FC<DataTableProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | TransactionStatus>('ALL');
+  const [agentFilter, setAgentFilter] = useState<string>('ALL');
 
   // Filter logic
   const filtered = transactions.filter((t) => {
     // Status filter
     if (statusFilter !== 'ALL' && t.status !== statusFilter) {
       return false;
+    }
+
+    // Agent filter
+    if (agentFilter !== 'ALL') {
+      const portMatch = (t.agentPort || 'M. Benkirane (AG-PORT-01)').includes(agentFilter);
+      const cosumarMatch = (t.agentCosumar || 'M. Tahiri (AG-COSU-02)').includes(agentFilter);
+      if (!portMatch && !cosumarMatch) return false;
     }
 
     // Search query
@@ -61,7 +72,9 @@ export const DataTable: React.FC<DataTableProps> = ({
       t.driverName.toLowerCase().includes(query) ||
       t.product.toLowerCase().includes(query) ||
       (t.carrier && t.carrier.toLowerCase().includes(query)) ||
-      (t.notes && t.notes.toLowerCase().includes(query))
+      (t.notes && t.notes.toLowerCase().includes(query)) ||
+      (t.agentPort && t.agentPort.toLowerCase().includes(query)) ||
+      (t.agentCosumar && t.agentCosumar.toLowerCase().includes(query))
     );
   });
 
@@ -95,7 +108,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Suivi chronologique des colonnes A à K du classeur logistique (Sorties Port & Entrées Cosumar).
+                Suivi chronologique des colonnes A à K du classeur logistique (Sorties Port & Entrées Cosumar avec visas des agents).
               </p>
             </div>
           </div>
@@ -106,10 +119,10 @@ export const DataTable: React.FC<DataTableProps> = ({
               id="btn-export-csv"
               onClick={() => exportToCSV(transactions)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded text-xs font-medium shadow-2xs transition cursor-pointer"
-              title="Télécharger le classeur au format CSV / Excel"
+              title="Télécharger le classeur au format CSV / Excel avec colonnes agents"
             >
               <Download className="w-3 h-3 text-slate-500" />
-              <span>Exporter CSV</span>
+              <span>Exporter CSV Multi-Agents</span>
             </button>
 
             {onClearAll && (
@@ -131,46 +144,64 @@ export const DataTable: React.FC<DataTableProps> = ({
         </div>
 
         {/* Filter bar & Search */}
-        <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="mt-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
-          {/* Status Tab buttons */}
-          <div className="flex items-center bg-slate-200/80 p-1 rounded-lg text-xs font-medium self-start">
-            <button
-              onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
-                statusFilter === 'ALL'
-                  ? 'bg-white text-slate-900 font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Tous ({transactions.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('En transit')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
-                statusFilter === 'En transit'
-                  ? 'bg-amber-500 text-white font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span>En transit ({inTransitCount})</span>
-            </button>
-            <button
-              onClick={() => setStatusFilter('Terminé')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
-                statusFilter === 'Terminé'
-                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-300" />
-              <span>Terminé ({finishedCount})</span>
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Status Tab buttons */}
+            <div className="flex items-center bg-slate-200/80 p-1 rounded-lg text-xs font-medium self-start">
+              <button
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
+                  statusFilter === 'ALL'
+                    ? 'bg-white text-slate-900 font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Tous ({transactions.length})
+              </button>
+              <button
+                onClick={() => setStatusFilter('En transit')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                  statusFilter === 'En transit'
+                    ? 'bg-amber-500 text-white font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span>En transit ({inTransitCount})</span>
+              </button>
+              <button
+                onClick={() => setStatusFilter('Terminé')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+                  statusFilter === 'Terminé'
+                    ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-300" />
+                <span>Terminé ({finishedCount})</span>
+              </button>
+            </div>
+
+            {/* Filter by Agent */}
+            <div className="flex items-center gap-1 bg-white border border-slate-300 px-2.5 py-1 rounded-lg text-xs">
+              <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="text-slate-500 text-[11px] font-medium hidden sm:inline">Agent :</span>
+              <select
+                value={agentFilter}
+                onChange={(e) => setAgentFilter(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-800 focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">Tous les agents</option>
+                <option value="Benkirane">M. Benkirane (Agent Port)</option>
+                <option value="Tahiri">M. Tahiri (Opérateur Cosumar)</option>
+                <option value="El Amrani">M. El Amrani (Contrôle Barrière)</option>
+              </select>
+            </div>
           </div>
 
           {/* Search box */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full md:w-72">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <Search className="w-4 h-4" />
             </div>
@@ -179,7 +210,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Rechercher camion, chauffeur, produit..."
+              placeholder="Rechercher camion, chauffeur, agent..."
               className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -232,6 +263,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                 Col K <br />
                 <span className="text-slate-900">Entrée Cosumar</span>
               </th>
+              <th className="py-2.5 px-3 whitespace-nowrap">
+                Visas Agents <br />
+                <span className="text-slate-900">Port & Cosumar</span>
+              </th>
               <th className="py-2.5 px-3 whitespace-nowrap text-center">
                 Actions
               </th>
@@ -240,7 +275,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           <tbody className="divide-y divide-slate-200">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} className="py-8 text-center text-slate-500">
+                <td colSpan={12} className="py-8 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center">
                     <AlertCircle className="w-8 h-8 text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-700">Aucune donnée correspondante</p>
@@ -263,7 +298,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                     }`}
                   >
                     {/* Col A: ID */}
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">
+                    <td className="py-2.5 px-3 font-mono font-bold text-blue-700 whitespace-nowrap">
                       {t.id}
                     </td>
 
@@ -343,6 +378,26 @@ export const DataTable: React.FC<DataTableProps> = ({
                       )}
                     </td>
 
+                    {/* Visas Agents */}
+                    <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 text-blue-800">
+                          <span className="text-[10px] font-bold text-blue-500">Port :</span>
+                          <span className="font-medium truncate max-w-[140px]" title={t.agentPort || 'M. Benkirane'}>
+                            {t.agentPort || 'M. Benkirane (AG-PORT-01)'}
+                          </span>
+                        </div>
+                        {t.status === 'Terminé' && (
+                          <div className="flex items-center gap-1 text-amber-800">
+                            <span className="text-[10px] font-bold text-amber-600">Cosumar :</span>
+                            <span className="font-medium truncate max-w-[140px]" title={t.agentCosumar || 'M. Tahiri'}>
+                              {t.agentCosumar || 'M. Tahiri (AG-COSU-02)'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
                     {/* Actions */}
                     <td className="py-2.5 px-3 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -380,12 +435,12 @@ export const DataTable: React.FC<DataTableProps> = ({
                         {isUnlocked ? (
                           <button
                             onClick={() => {
-                              if (confirm(`Supprimer définitivement la transaction ${t.id} (${t.truckID}) ?`)) {
+                              if (confirm(`Supprimer la transaction ${t.id} de la feuille Excel ?`)) {
                                 onDeleteTransaction(t.id);
                               }
                             }}
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer"
-                            title="Supprimer (Mode Superviseur)"
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                            title="Supprimer la ligne (Mode Superviseur)"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -393,7 +448,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                           <button
                             onClick={onOpenUnlockModal}
                             className="p-1 text-slate-300 hover:text-slate-500 rounded transition cursor-pointer"
-                            title="Feuille protégée (mot de passe 1234 requis pour modifier)"
+                            title="Feuille protégée. Code 1234 requis pour modifier/supprimer."
                           >
                             <Lock className="w-3 h-3" />
                           </button>
@@ -409,14 +464,21 @@ export const DataTable: React.FC<DataTableProps> = ({
         </table>
       </div>
 
-      {/* Table Footer info */}
-      <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span>Classeur protégé par mot de passe (VBA: <code>MDP_FEUILLE = "1234"</code>)</span>
+      {/* Spreadsheet Status Footer */}
+      <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <span>
+            Affichage : <strong>{filtered.length}</strong> sur <strong>{transactions.length}</strong> enregistrements
+          </span>
+          {agentFilter !== 'ALL' && (
+            <span className="text-blue-700 font-medium">
+              • Filtré sur agent : {agentFilter}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-4 text-slate-600">
-          <span>Total en transit : <strong className="text-amber-700">{inTransitCount}</strong></span>
-          <span>Total réceptionné : <strong className="text-emerald-700">{finishedCount}</strong></span>
+        <div className="flex items-center gap-4 text-[11px] text-slate-400 font-mono">
+          <span>Feuille : Saisie_Donnees</span>
+          <span>Plage active : A2:K{Math.max(2, transactions.length + 1)}</span>
         </div>
       </div>
 

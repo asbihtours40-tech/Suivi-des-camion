@@ -14,6 +14,7 @@ interface DepartPortModalProps {
     product: string;
     carrier?: string;
     notes?: string;
+    agentPort?: string;
   }) => Transaction;
   nextIdPreview: string;
   onPrintTicket: (transaction: Transaction) => void;
@@ -33,6 +34,7 @@ export const DepartPortModal: React.FC<DepartPortModalProps> = ({
   const [product, setProduct] = useState(COMMON_PRODUCTS[0]);
   const [carrier, setCarrier] = useState('Cosumar Logistique');
   const [notes, setNotes] = useState('');
+  const [agentPort, setAgentPort] = useState('M. Benkirane (AG-PORT-01)');
   const [error, setError] = useState<string | null>(null);
 
   // Toggle quick fleet drawer
@@ -97,6 +99,7 @@ export const DepartPortModal: React.FC<DepartPortModalProps> = ({
       product: cleanProduct,
       carrier: carrier.trim() || undefined,
       notes: notes.trim() || undefined,
+      agentPort: agentPort.trim() || undefined,
     });
 
     setSuccessData({ transaction: createdTransaction });

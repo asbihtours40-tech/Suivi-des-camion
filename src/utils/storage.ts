@@ -1,8 +1,45 @@
-import { Transaction } from '../types';
+import { Transaction, AgentActivityItem } from '../types';
 import { INITIAL_TRANSACTIONS } from '../data/mockTransactions';
 
 const STORAGE_KEY = 'logistics_tracking_port_cosumar_v2';
+const ACTIVITY_STORAGE_KEY = 'cosumar_agent_activity_logs_v1';
 export const SHEET_PASSWORD = '1234'; // From VBA Const MDP_FEUILLE As String = "1234"
+
+// BroadcastChannel for cross-tab multi-agent real-time communication
+const BROADCAST_CHANNEL_NAME = 'cosumar_realtime_logistics_channel';
+let realtimeChannel: BroadcastChannel | null = null;
+try {
+  if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+    realtimeChannel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+  }
+} catch {
+  realtimeChannel = null;
+}
+
+export function broadcastRealtimeUpdate(action: string, payload?: unknown): void {
+  try {
+    if (realtimeChannel) {
+      realtimeChannel.postMessage({ action, payload, timestamp: Date.now() });
+    }
+  } catch (err) {
+    console.warn('BroadcastChannel error', err);
+  }
+}
+
+export function subscribeToRealtimeUpdates(
+  callback: (msg: { action: string; payload?: unknown; timestamp: number }) => void
+): () => void {
+  if (!realtimeChannel) return () => {};
+  const handler = (event: MessageEvent) => {
+    if (event.data) {
+      callback(event.data);
+    }
+  };
+  realtimeChannel.addEventListener('message', handler);
+  return () => {
+    realtimeChannel?.removeEventListener('message', handler);
+  };
+}
 
 export function getTransactions(): Transaction[] {
   try {
@@ -29,11 +66,54 @@ export function saveTransactions(transactions: Transaction[]): void {
 export function clearAllTransactions(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
-    // Also clean up any older depot storage keys
     localStorage.removeItem('logistics_tracking_port_depot_v1');
     localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    clearAgentActivityLogs();
+    broadcastRealtimeUpdate('CLEAR_ALL');
   } catch (err) {
     console.error('Failed to clear transactions', err);
+  }
+}
+
+// --------------------------------------------------------------------
+// MULTI-AGENT ACTIVITY LOGS
+// --------------------------------------------------------------------
+export function getAgentActivityLogs(): AgentActivityItem[] {
+  try {
+    const raw = localStorage.getItem(ACTIVITY_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export function saveAgentActivityLogs(logs: AgentActivityItem[]): void {
+  try {
+    localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(logs.slice(0, 50))); // Keep last 50 events
+  } catch (err) {
+    console.error('Failed to save activity logs', err);
+  }
+}
+
+export function addAgentActivityLog(item: Omit<AgentActivityItem, 'id' | 'timestamp'>): AgentActivityItem {
+  const current = getAgentActivityLogs();
+  const newItem: AgentActivityItem = {
+    ...item,
+    id: `ACT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    timestamp: new Date().toISOString(),
+  };
+  const updated = [newItem, ...current].slice(0, 50);
+  saveAgentActivityLogs(updated);
+  broadcastRealtimeUpdate('NEW_ACTIVITY_LOG', newItem);
+  return newItem;
+}
+
+export function clearAgentActivityLogs(): void {
+  try {
+    localStorage.removeItem(ACTIVITY_STORAGE_KEY);
+  } catch {
+    // ignore
   }
 }
 
@@ -124,7 +204,9 @@ export function exportToCSV(transactions: Transaction[]): void {
     'Observations (Col H)',
     'Produit (Col I)',
     'Statut (Col J)',
-    'Heure Entree Cosumar (Col K)'
+    'Heure Entree Cosumar (Col K)',
+    'Agent Quai Port (Sortie)',
+    'Agent Pont-Bascule (Pesée)'
   ];
 
   const rows = transactions.map(t => [
@@ -138,7 +220,9 @@ export function exportToCSV(transactions: Transaction[]): void {
     `"${(t.notes || '').replace(/"/g, '""')}"`,
     `"${(t.product || '').replace(/"/g, '""')}"`,
     t.status,
-    t.entryDepotTime ? formatDateFrench(t.entryDepotTime) : ''
+    t.entryDepotTime ? formatDateFrench(t.entryDepotTime) : '',
+    `"${(t.agentPort || 'M. Benkirane (AG-PORT-01)').replace(/"/g, '""')}"`,
+    `"${(t.agentCosumar || (t.status === 'Terminé' ? 'M. Tahiri (AG-COSU-02)' : '')).replace(/"/g, '""')}"`
   ]);
 
   const csvContent = '\uFEFF' + [
@@ -150,7 +234,7 @@ export function exportToCSV(transactions: Transaction[]): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `Saisie_Donnees_Port_Cosumar_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.setAttribute('download', `Saisie_Donnees_Port_Cosumar_MultiAgents_${new Date().toISOString().slice(0, 10)}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

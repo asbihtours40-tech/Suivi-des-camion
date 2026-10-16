@@ -8,7 +8,7 @@ interface ArriveeDepotModalProps {
   onClose: () => void;
   transactions: Transaction[];
   initialSelectedTruckId: string | null;
-  onSubmitWeighing: (transactionId: string, gross: number, tare: number, notes?: string) => Transaction;
+  onSubmitWeighing: (transactionId: string, gross: number, tare: number, notes?: string, agentCosumar?: string) => Transaction;
   onPrintTicket: (transaction: Transaction) => void;
 }
 
@@ -27,6 +27,7 @@ export const ArriveeDepotModal: React.FC<ArriveeDepotModalProps> = ({
   const [grossInput, setGrossInput] = useState<string>('');
   const [tareInput, setTareInput] = useState<string>('');
   const [notesInput, setNotesInput] = useState<string>('');
+  const [agentCosumar, setAgentCosumar] = useState<string>('M. Tahiri (AG-COSU-02)');
   const [error, setError] = useState<string | null>(null);
 
   // Success summary state (matches VBA MsgBox)
@@ -102,7 +103,8 @@ export const ArriveeDepotModal: React.FC<ArriveeDepotModalProps> = ({
       selectedTransaction.id, 
       grossNum, 
       tareNum,
-      notesInput.trim() || undefined
+      notesInput.trim() || undefined,
+      agentCosumar.trim() || undefined
     );
 
     setSuccessData({
